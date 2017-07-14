@@ -1,0 +1,91 @@
+{
+  "variables": {
+    "_DOWNLOAD_SITE": "https://www.suse.com/products/server/download",
+    "_README": "You must download the automated installer iso from the following page, and then place it in the `iso` dir",
+
+    "box_name": "sles-12-sp2",
+    "vm_name": "sles-12-sp2-x86_64",
+
+    "iso_url": "./iso/SLE-12-SP2-Server-DVD-x86_64-GM-DVD1.iso",
+    "iso_checksum": "dd724e9248f2c3507e8e9d0050a4c8b6e9aeda7fdf0870858757cc6c01b7d47d",
+    "iso_checksum_type": "sha256",
+
+    "username": "vagrant",
+    "password": "vagrant",
+
+    "cpu": "2",
+    "ram": "2048",
+    "disk": "21440",
+
+    "http_proxy": "{{env `http_proxy`}}",
+    "https_proxy": "{{env `https_proxy`}}"
+  },
+  "builders": [
+    {
+      "vm_name": "{{user `vm_name`}}",
+      "type": "hyperv-iso",
+
+      "iso_url": "{{user `iso_url`}}",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+      "iso_target_extension": "iso",
+      "iso_target_path": "./packer-cache",
+
+      "guest_additions_mode": "disable",
+      "communicator": "ssh",
+      "ssh_username": "{{user `username`}}",
+      "ssh_password": "{{user `password`}}",
+      "ssh_timeout": "10m",
+
+      "http_directory": "http",
+      "output_directory": "packer-{{user `vm_name`}}-hyperv",
+
+      "generation": 2,
+      "cpu": "{{user `cpu`}}",
+      "ram_size": "{{user `ram`}}",
+      "disk_size": "{{user `disk`}}",
+      "enable_dynamic_memory": false,
+
+      "boot_command": [
+        "<esc><enter><wait>",
+        "linux netdevice=eth0 netsetup=dhcp install=cd:/<wait>",
+        " lang=en_US-8 autoyast=http://{{ .HTTPIP }}:{{ .HTTPPort }}/sles-12/sles-12-sp2-x86_64-autoinst.xml<wait>",
+        " textmode=1<wait>",
+        "<enter><wait>"
+      ],
+      "boot_wait": "10s",
+      "enable_secure_boot": false,
+
+      "shutdown_command": "echo 'vagrant' | sudo -S /sbin/halt -h -p",
+      "shutdown_timeout": "5m"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "environment_vars": [
+        "HOME_DIR=/home/vagrant",
+        "http_proxy={{user `http_proxy`}}",
+        "https_proxy={{user `https_proxy`}}",
+        "no_proxy={{user `no_proxy`}}"
+      ],
+      "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E sh '{{.Path}}'",
+      "scripts": [
+        "scripts/common/sshd.sh",
+        "scripts/common/vagrant.sh",
+        "scripts/sles/unsupported-modules.sh",
+        "scripts/sles/sudoers.sh",
+        "scripts/sles/zypper-locks.sh",
+        "scripts/sles/remove-dvd-source.sh",
+        "scripts/sles/cleanup.sh",
+        "scripts/common/minimize.sh"
+      ]
+    }
+  ],
+  "post-processors": [
+    {
+      "type": "vagrant",
+      "output": "builds/{{user `box_name`}}.{{.Provider}}.box"
+    }
+  ]
+}
