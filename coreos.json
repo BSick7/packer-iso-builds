@@ -1,0 +1,63 @@
+{
+  "variables": {
+    "base_name": "coreos-auto",
+
+    "version": "1465.7.0",
+    "iso_location": "http://stable.release.core-os.net/amd64-usr",
+    "iso_checksum_type": "md5",
+    "iso_checksum": "553063bebfa3fc594547fc4bb25a98ff",
+
+    "username": "vagrant",
+    "password": "vagrant",
+
+    "cpu": "2",
+    "ram": "2048",
+    "disk": "21440"
+  },
+  "builders": [
+    {
+      "vm_name": "{{user `base_name`}}-{{user `version`}}",
+      "type": "hyperv-iso",
+
+      "iso_url": "{{user `iso_location`}}/{{user `version`}}/coreos_production_iso_image.iso",
+      "iso_checksum": "{{user `iso_checksum`}}",
+      "iso_checksum_type": "{{user `iso_checksum_type`}}",
+
+      "communicator": "ssh",
+      "ssh_username": "core",
+      "ssh_private_key_file": "http/keys/vagrant",
+      "ssh_timeout": "10m",
+
+      "guest_additions_mode": "attach",
+      "guest_additions_path": "./",
+
+      "http_directory": "http",
+      "output_directory": "packer-{{user `base_name`}}-hyperv",
+
+      "generation": 1,
+      "cpu": "{{user `cpu`}}",
+      "ram_size": "{{user `ram`}}",
+      "disk_size": "{{user `disk`}}",
+      "enable_dynamic_memory": false,
+
+      "enable_secure_boot": false,
+      "boot_command": [
+        "sudo -i<enter>",
+        "wget http://{{ .HTTPIP }}:{{ .HTTPPort }}/coreos/ignition.json<enter>",
+        "coreos-install -d /dev/sda -C stable -i ignition.json<enter>"
+      ],
+      "boot_wait": "10m",
+
+      "shutdown_command": "sudo shutdown now",
+      "shutdown_timeout": "60m"
+    }
+  ],
+  "provisioners": [
+  ],
+  "post-processors": [
+    {
+      "type": "vagrant",
+      "output": "builds/{{user `base_name`}}.{{.Provider}}.box"
+    }
+  ]
+}
